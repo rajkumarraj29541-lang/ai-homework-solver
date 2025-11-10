@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Study Smart AI</title>
+<style>
+  body { font-family: Arial, sans-serif; background:#0f172a; color:#e6eef8; padding:20px; text-align:center; }
+  .card { background: linear-gradient(180deg,#0b1220,#0e1530); border-radius:12px; padding:18px; max-width:720px; margin:12px auto; box-shadow:0 6px 18px rgba(0,0,0,0.5); }
+  textarea { width:92%; height:120px; padding:10px; border-radius:8px; border:1px solid #334155; background:#020617; color:#e6eef8; resize:vertical; }
+  select, button { padding:10px 14px; margin:8px 6px; border-radius:8px; font-size:15px; }
+  button { background:#10b981; color:#04201b; border:none; cursor:pointer; }
+  #status, #answer, pre { width:92%; margin:10px auto; text-align:left; border-radius:8px; padding:10px; background:#001528; color:#cfe8ff; border:1px solid #123047; }
+  pre { white-space:pre-wrap; word-break:break-word; font-size:13px; color:#bfe6ff; }
+  a.small { color:#93c5fd; font-size:13px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>🧠 Study Smart AI</h1>
+    <p class="small">Ask questions from any subject — Maths, Physics, Chemistry, English...</p>
+
+    <select id="subject" aria-label="subject">
+      <option>General</option>
+      <option>Maths</option>
+      <option>Physics</option>
+      <option>Chemistry</option>
+      <option>Biology</option>
+      <option>English</option>
+    </select><br>
+
+    <textarea id="question" placeholder="Type your question here (example: Explain Newton's 2nd law)"></textarea><br>
+    <button id="solveBtn">Solve</button>
+
+    <div id="status">Status: idle</div>
+    <div id="answer"><strong>Answer will appear here.</strong></div>
+
+    <details style="margin-top:8px;">
+      <summary class="small">Full API response (debug)</summary>
+      <pre id="rawResponse">—</pre>
+    </details>
+
+    <p style="text-align:center; margin-top:12px;"><a class="small" href="https://rajkumarraj29541-lang.github.io/-Study-Smart-Ai/" target="_blank">Open live page</a></p>
+  </div>
+
+<script>
+document.getElementById('solveBtn').addEventListener('click', solve);
+
+async function solve(){
+  const subject = document.getElementById('subject').value;
+  const q = document.getElementById('question').value.trim();
+  const status = document.getElementById('status');
+  const answer = document.getElementById('answer');
+  const raw = document.getElementById('rawResponse');
+
+  if (!q) { alert('Please enter a question'); return; }
+
+  status.textContent = 'Status: sending request...';
+  answer.innerHTML = 'Loading...';
+  raw.textContent = '—';
+
+  // Browser-friendly API endpoint (proxy-friendly)
+  const apiUrl = 'https://freegpt.one/api/openai?text=' + encodeURIComponent(subject + ' question: ' + q);
+
+  try {
+    const resp = await fetch(apiUrl, { method: 'GET' });
+    status.textContent = `Status: HTTP ${resp.status} ${resp.statusText}`;
+
+    const text = await resp.text();
+    raw.textContent = text;
+
+    let data;
+    try { data = JSON.parse(text); } catch(e) { 
+      // If endpoint returns plain text, use it directly
+      answer.innerHTML = text || 'No response text returned';
+      status.textContent += ' — non-JSON response';
+      return;
+    }
+
+    // common field names: result, text, choices, output
+    const possible = data.result || data.text || data.output || (data.choices && data.choices[0] && (data.choices[0].text || data.choices[0].message && data.choices[0].message.content)) || null;
+    if (possible) {
+      answer.innerHTML = possible;
+      status.textContent += ' — OK';
+    } else if (typeof data === 'string') {
+      answer.innerHTML = data;
+      status.textContent += ' — OK';
+    } else {
+      answer.innerHTML = '<strong>No usable answer field in API response.</strong>';
+      status.textContent += ' — missing answer field';
+    }
+
+  } catch (err) {
+    status.textContent = 'Status: request failed — network/CORS';
+    raw.textContent = err.toString();
+    answer.innerHTML = '<strong>Network error or blocked request.</strong> See debug below.';
+  }
+}
+</script>
+</body>
+  </html>
